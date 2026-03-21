@@ -2,6 +2,7 @@ from platform import node
 
 import pandas as pd
 data = pd.read_csv("/Users/martin/LabsEDD2/dataset_courses_with_reviews.csv")
+dataset = data.set_index("id").to_dict("index")
 class Node:
     def __init__(self, data):
         self.data = data
@@ -154,4 +155,3 @@ class AVL:
     
     ####################################################################
     ##aqui termina lo mio##
-    ######################################################################
