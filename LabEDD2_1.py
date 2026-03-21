@@ -1,3 +1,5 @@
+from platform import node
+
 import pandas as pd
 data = pd.read_csv("/Users/martin/LabsEDD2/dataset_courses_with_reviews.csv")
 class Node:
@@ -111,3 +113,45 @@ class AVL:
             return self.right_left_rotation(nodo)
 
         return nodo
+
+        ##################################################################
+        ##lo mio de insertar por id y que se balancee automaticamente#####
+        ##################################################################
+    def insert_balance(self, node, data):
+        key = Node.satisfaction(data)
+        if node is None:
+            return Node(data)
+        if key < node.key:
+            node.left = self.insert_balance(node.left, data)
+        elif key > node.key:
+            node.right = self.insert_balance(node.right, data)
+        else:
+            return node
+        self.update_height(node)
+        balance = self.get_balance(node)
+        if balance > 1 and key < node.left.key:
+            return self.right_rotation(node)
+        if balance < -1 and key > node.right.key:
+            return self.left_rotation(node)
+        if balance > 1 and key > node.left.key:
+            return self.left_right_rotation(node)
+        if balance < -1 and key < node.right.key:
+            return self.right_left_rotation(node)
+        return node
+
+    def insert_by_ID_user(self, dataset):
+        try:
+            course_id = int(input("Insert course ID: "))
+        except ValueError:
+            print("Invalid ID")
+            return False
+        if course_id not in dataset:
+            print("ID not found")
+            return False
+        data = dataset[course_id]
+        self.root = self.insert_balance(self.root, data)
+        return True
+    
+    ####################################################################
+    ##aqui termina lo mio##
+    ######################################################################
