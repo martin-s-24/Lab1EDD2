@@ -62,3 +62,52 @@ class AVL:
     def right_left_rotation(self, p):
         p.right = self.right_rotation(p.right)
         return self.left_rotation(p)
+
+    def max_der(self, nodo):
+        if nodo is None:
+            return None
+        if nodo.right is None:
+            return nodo
+        return self.max_der(nodo.right)
+
+    def predecesor(self, nodo):
+        if nodo is None:
+            return None
+        return self.max_der(nodo.left)
+
+    def delete(self, nodo):
+        if nodo is None:
+            return None
+        # Caso 1: hoja
+        if nodo.left is None and nodo.right is None:
+            return None
+        # Caso 2a: solo hijo derecho
+        elif nodo.left is None:
+            return nodo.right
+        # Caso 2b: solo hijo izquierdo
+        elif nodo.right is None:
+            return nodo.left
+        # Caso 3: dos hijos
+        else:
+            pred = self.predecesor(nodo)
+            nodo.data = pred.data
+            nodo.key = pred.key
+            nodo.left = self.delete(nodo.left)
+
+        self.update_height(nodo)
+        balance = self.get_balance(nodo)
+
+        # Caso izquierda-izquierda
+        if balance > 1 and self.get_balance(nodo.left) >= 0:
+            return self.right_rotation(nodo)
+        # Caso izquierda-derecha
+        if balance > 1 and self.get_balance(nodo.left) < 0:
+            return self.left_right_rotation(nodo)
+        # Caso derecha-derecha
+        if balance < -1 and self.get_balance(nodo.right) <= 0:
+            return self.left_rotation(nodo)
+        # Caso derecha-izquierda
+        if balance < -1 and self.get_balance(nodo.right) > 0:
+            return self.right_left_rotation(nodo)
+
+        return nodo
