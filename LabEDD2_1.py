@@ -1,4 +1,4 @@
-from platform import nodeimport datetime
+from platform import node, nodeimport datetime
 import pandas as pd
 data = pd.read_csv("/Users/martin/LabsEDD2/dataset_courses_with_reviews.csv")
 class nodo:
@@ -184,9 +184,9 @@ class AVL:
         ##lo mio de insertar por id y que se balancee automaticamente#####
         ##################################################################
     def insert_balance(self, node, data):
-        key = Node.satisfaction(data)
+        key = nodo.satisfaction(data)
         if node is None:
-            return Node(data)
+            return nodo(data)
         if key < node.key:
             node.left = self.insert_balance(node.left, data)
         elif key > node.key:
@@ -217,6 +217,53 @@ class AVL:
         data = dataset[course_id]
         self.root = self.insert_balance(self.root, data)
         return True
+    
+
+    def BFS(self):
+        height = self.get_height(self.root)
+        for level in range(0, height):
+            print(f"Level {level}:")
+            self.Layer_Traversal(self.root, level)
+
+
+
+    def Layer_Traversal(self, node, level, i=0):
+        if node is None:
+            return
+        if i == level:
+            print(f"{i}. {node.key} | {node.data.get('title', '')}")
+            return
+        self.Layer_Traversal(node.left, level, i + 1)
+        self.Layer_Traversal(node.right, level, i + 1)
+
+
+    def search_by_metric(self, node, metric, data, results = None):
+      if results is None:
+        results = []
+      if node is None:
+        return results
+      if str(node.data.get(metric, "")).lower() == str(data).lower():
+        results.append(node)
+      self.search_by_metric(node.left, metric, data, results)
+      self.search_by_metric(node.right, metric, data, results)
+      return results
+
+    def search_specific(self):
+        for i in range(len(self.row_metric_list)):
+            print(f"{i+1}. {self.row_metric_list[i]}")
+
+        metric = input("Chosen metric ").strip()
+        value = input(f"Enter value of metric ").strip()
+
+
+        results = self.search_by_metric(self.root, metric, value)
+        if results:
+            print(f"{len(results)} result(s) found:")
+            for node in results:
+                print(f"satisfaction={node.key} | {node.data.get('title', '')}")
+        else:
+            print("No results found.")
+        return results
     
     ####################################################################
     ##aqui termina lo mio##
