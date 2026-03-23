@@ -1,12 +1,10 @@
-from platform import node
-
+from platform import nodeimport datetime
 import pandas as pd
 data = pd.read_csv("/Users/martin/LabsEDD2/dataset_courses_with_reviews.csv")
-dataset = data.set_index("id").to_dict("index")
-class Node:
+class nodo:
     def __init__(self, data):
         self.data = data
-        self.key = Node.satisfaction(data)
+        self.key = nodo.satisfaction(data)
         self.left = None
         self.right = None
         self.height = 1
@@ -26,19 +24,19 @@ class AVL:
     def __init__(self):
         self.root = None
 
-    def get_height(self, node):
-        if node: 
-            return node.height
+    def get_height(self, nodo):
+        if nodo: 
+            return nodo.height
         else: 
             return 0
 
-    def get_balance(self, node):
-        if node is None:
+    def get_balance(self, nodo):
+        if nodo is None:
             return 0
-        return self.get_height(node.left) - self.get_height(node.right)
+        return self.get_height(nodo.left) - self.get_height(nodo.right)
 
-    def update_height(self, node):
-        node.height = 1 + max(self.get_height(node.left), self.get_height(node.right))
+    def update_height(self, nodo):
+        nodo.height = 1 + max(self.get_height(nodo.left), self.get_height(nodo.right))
 
     def left_rotation(self, p):
         q = p.right  
@@ -66,6 +64,19 @@ class AVL:
         p.right = self.right_rotation(p.right)
         return self.left_rotation(p)
 
+    def search_generic(self, key):
+        p = self.root
+        pad = None
+        while p is not None:
+            if key == p.key:
+                return p, pad
+            pad = p
+            if key < p.key:
+                p = p.left
+            else:
+                p = p.right
+        return p, pad
+
     def max_der(self, nodo):
         if nodo is None:
             return None
@@ -78,42 +89,96 @@ class AVL:
             return None
         return self.max_der(nodo.left)
 
-    def delete(self, nodo):
+    def search_by_id(self, nodo, id):
         if nodo is None:
             return None
-        # Caso 1: hoja
-        if nodo.left is None and nodo.right is None:
+        if nodo.data["id"] == id:
+            return nodo
+        # como el árbol no está ordenado por id, toca buscar en ambos lados
+        resultado = self.search_by_id(nodo.left, id)
+        if resultado is not None:
+            return resultado
+        return self.search_by_id(nodo.right, id)
+
+    def delete_by_id(self, id):
+        nodo = self.search_by_id(self.root, id)
+        if nodo is None:
+            return False  # no existe
+        self.root = self.delete(self.root, nodo.key)
+        return True
+
+    def delete_by_key(self, key):
+        p, padre = self.search_generic(key)
+        if p is None:
+            return False  # no existe
+        self.root = self.delete(self.root, key)
+        return True
+
+    def delete(self, nodo, key):
+        if nodo is None:
             return None
-        # Caso 2a: solo hijo derecho
-        elif nodo.left is None:
-            return nodo.right
-        # Caso 2b: solo hijo izquierdo
-        elif nodo.right is None:
-            return nodo.left
-        # Caso 3: dos hijos
+        if key < nodo.key:
+            nodo.left = self.delete(nodo.left, key)
+        elif key > nodo.key:
+            nodo.right = self.delete(nodo.right, key)
         else:
-            pred = self.predecesor(nodo)
-            nodo.data = pred.data
-            nodo.key = pred.key
-            nodo.left = self.delete(nodo.left)
+            # Caso 1: hoja
+            if nodo.left is None and nodo.right is None:
+                return None
+            # Caso 2a: solo hijo derecho
+            elif nodo.left is None:
+                return nodo.right
+            # Caso 2b: solo hijo izquierdo
+            elif nodo.right is None:
+                return nodo.left
+            # Caso 3: dos hijos
+            else:
+                pred = self.predecesor(nodo)
+                nodo.data = pred.data
+                nodo.key = pred.key
+                nodo.left = self.delete(nodo.left, pred.key)
 
-        self.update_height(nodo)
-        balance = self.get_balance(nodo)
+            self.update_height(nodo)
+            balance = self.get_balance(nodo)
 
-        # Caso izquierda-izquierda
-        if balance > 1 and self.get_balance(nodo.left) >= 0:
-            return self.right_rotation(nodo)
-        # Caso izquierda-derecha
-        if balance > 1 and self.get_balance(nodo.left) < 0:
-            return self.left_right_rotation(nodo)
-        # Caso derecha-derecha
-        if balance < -1 and self.get_balance(nodo.right) <= 0:
-            return self.left_rotation(nodo)
-        # Caso derecha-izquierda
-        if balance < -1 and self.get_balance(nodo.right) > 0:
-            return self.right_left_rotation(nodo)
+            # Caso izquierda-izquierda
+            if balance > 1 and self.get_balance(nodo.left) >= 0:
+                return self.right_rotation(nodo)
+            # Caso izquierda-derecha
+            if balance > 1 and self.get_balance(nodo.left) < 0:
+                return self.left_right_rotation(nodo)
+            # Caso derecha-derecha
+            if balance < -1 and self.get_balance(nodo.right) <= 0:
+                return self.left_rotation(nodo)
+            # Caso derecha-izquierda
+            if balance < -1 and self.get_balance(nodo.right) > 0:
+                return self.right_left_rotation(nodo)
 
-        return nodo
+            return nodo
+
+    def search_positive_reviews(self, nodo, result=None):
+        if result is None:
+            result = []
+        if nodo is not None:
+            if nodo.data["positive_reviews"] > nodo.data["negative_reviews"] + nodo.data["neutral_reviews"]:
+                result.append(nodo)
+            self.search_positive_reviews(nodo.left, result)
+            self.search_positive_reviews(nodo.right, result)
+        return result
+
+    def search_by_date(self, fecha, node=None, result=None):
+        if result is None:
+            result = []
+        if node is None:
+            node = self.root
+        if node is not None:
+            fecha_dada = datetime.strptime(fecha, "%Y-%m-%d") #strptime convierte un string a un objeto datetime.
+            fecha_nodo = datetime.strptime(node.data["created"][:10], "%Y-%m-%d")
+            if fecha_nodo > fecha_dada:
+                result.append(node)
+            self.search_by_date(fecha, node.left, result)
+            self.search_by_date(fecha, node.right, result)
+        return result
 
         ##################################################################
         ##lo mio de insertar por id y que se balancee automaticamente#####
