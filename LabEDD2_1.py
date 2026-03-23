@@ -237,16 +237,21 @@ class AVL:
         self.Layer_Traversal(node.right, level, i + 1)
 
 
-    def search_by_metric(self, node, metric, data, results = None):
-      if results is None:
-        results = []
-      if node is None:
+    def search_by_metric(self, node, metric, value, results=None):
+        if results is None:
+            results = []
+        if node is None:
+            return results
+        node_value = node.data.get(metric, "")
+        try:
+            if float(node_value) == float(value):        ###cambiado para poder buscar por numeros y no solo string
+                results.append(node)
+        except (ValueError, TypeError):
+            if str(node_value).lower() == str(value).lower():
+                results.append(node)
+        self.search_by_metric(node.left, metric, value, results)
+        self.search_by_metric(node.right, metric, value, results)
         return results
-      if str(node.data.get(metric, "")).lower() == str(data).lower():
-        results.append(node)
-      self.search_by_metric(node.left, metric, data, results)
-      self.search_by_metric(node.right, metric, data, results)
-      return results
 
     def search_specific(self):
         for i in range(len(self.row_metric_list)):
@@ -265,5 +270,59 @@ class AVL:
             print("No results found.")
         return results
     
+
+
+
+
+
+
+
+
+    def get_info(self, node):
+        for key, value in node.data.items():
+            print(f"{key}: {value}")
+
+    def get_balance_node(self, node):
+        return self.get_balance(node)
+
+    def get_level(self, node, current=None, level=1):
+        if current is None:
+            current = self.root
+        if current is None:
+            return None
+        if current.key == node.key:
+            return level
+        if node.key < current.key:
+            return self.get_level(node, current.left, level + 1)
+        return self.get_level(node, current.right, level + 1)
+
+    def get_parent(self, node, current=None, parent=None):
+        if current is None:
+            current = self.root
+        if current is None:
+            return None
+        if current.key == node.key:
+            return parent
+        if node.key < current.key:
+            return self.get_parent(node, current.left, current)
+        return self.get_parent(node, current.right, current)
+
+    def get_grandparent(self, node):
+        parent = self.get_parent(node)
+        if parent is None:
+            return None
+        return self.get_parent(parent)
+
+    def get_uncle(self, node):
+        parent = self.get_parent(node)
+        if parent is None:
+            return None
+        grandparent = self.get_grandparent(node)
+        if grandparent is None:
+            return None
+        if grandparent.left and grandparent.left.key == parent.key:
+            return grandparent.right
+        return grandparent.left
+
     ####################################################################
     ##aqui termina lo mio##
