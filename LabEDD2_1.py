@@ -1,6 +1,10 @@
-from datetime import  datetime 
+from datetime import  datetime
+from platform import node 
+from numpy._core.umath import rint
 import pandas as pd
-data = pd.read_csv("/Users/martin/LabsEDD2/dataset_courses_with_reviews.csv")
+from graphviz import Digraph, dot
+data = pd.read_csv(r"C:\Users\mayma\Downloads\dataset_courses_with_reviews.csv")
+                   
 class nodo:
     def __init__(self, data):
         self.data = data
@@ -16,6 +20,8 @@ class nodo:
         neg = row["negative_reviews"]
         neu = row["neutral_reviews"]
         num = row["num_reviews"]
+        if num == 0:
+            return 0.0
         sat = rating * 0.7 + ((5 * pos + 3 * neu + neg) / num) * 0.3
         return round(sat, 5)
 
@@ -23,6 +29,7 @@ class nodo:
 class AVL:
     def __init__(self):
         self.root = None
+        self.row_metric_list = data.columns.tolist()
 
     def get_height(self, nodo):
         if nodo: 
@@ -105,6 +112,7 @@ class AVL:
         if nodo is None:
             return False  # no existe
         self.root = self.delete(self.root, nodo.key)
+        self.visualize()
         return True
 
     def delete_by_key(self, key):
@@ -112,6 +120,7 @@ class AVL:
         if p is None:
             return False  # no existe
         self.root = self.delete(self.root, key)
+        self.visualize()
         return True
 
     def delete(self, nodo, key):
@@ -261,8 +270,20 @@ class AVL:
             return False
         data = dataset[course_id]
         self.root = self.insert_balance(self.root, data)
+        self.visualize()
         return True
     
+    def delete_by_metric(self, metric, value):
+        results = self.search_by_metric(self.root, metric, value)
+        if not results:
+            print(f"No nodes found with {metric}={value}")
+            return False
+        for node in results:
+            self.root = self.delete(self.root, node.key)
+        self.visualize()
+        print(f"{len(results)} node(s) deleted.")
+        return True
+
 
     def BFS(self):
         height = self.get_height(self.root)
@@ -276,7 +297,7 @@ class AVL:
         if node is None:
             return
         if i == level:
-            print(f"{i}. {node.key} | {node.data.get('title', '')}")
+            print(f"{i}.{node.data.get('id', '')}")
             return
         self.Layer_Traversal(node.left, level, i + 1)
         self.Layer_Traversal(node.right, level, i + 1)
@@ -297,7 +318,7 @@ class AVL:
         self.search_by_metric(node.left, metric, value, results)
         self.search_by_metric(node.right, metric, value, results)
         return results
-
+######esta vaina no se usa
     def search_specific(self):
         for i in range(len(self.row_metric_list)):
             print(f"{i+1}. {self.row_metric_list[i]}")
@@ -314,15 +335,7 @@ class AVL:
         else:
             print("No results found.")
         return results
-    
-
-
-
-
-
-
-
-
+    #####esta vain no se usa
     def get_info(self, node):
         for key, value in node.data.items():
             print(f"{key}: {value}")
@@ -330,7 +343,7 @@ class AVL:
     def get_balance_node(self, node):
         return self.get_balance(node)
 
-    def get_level(self, node, current=None, level=1):
+    def get_level(self, node, current=None, level=0):
         if current is None:
             current = self.root
         if current is None:
@@ -371,196 +384,282 @@ class AVL:
 
     ####################################################################
     ##aqui termina lo mio##
+###### aqui empieza lo de graphviz 
+    def visualize(self, filename="avl_tree"):
+        dot = Digraph()
+        dot.attr(fontname="Arial Unicode MS")
+        dot.node_attr.update(fontname="Arial Unicode MS")
+        self._add_nodes(dot, self.root)
+        dot.render(filename, format="png", cleanup=True)
+        print(f"Tree saved as {filename}.png")
 
+    def _add_nodes(self, dot, node):
+        if node is None:
+            return
+        course_id = node.data.get("id", "")
+        title = str(node.data.get("title", ""))[:20]
+        # replace non-ascii characters so graphviz can render them
+        ##title = title.encode("ascii", "replace").decode("ascii")
+        label = f"ID: {course_id}\nTitle: {title}\nSat: {node.key}"
+        dot.node(str(node.key), label=label)
+        if node.left:
+            dot.edge(str(node.key), str(node.left.key))
+            self._add_nodes(dot, node.left)
+        if node.right:
+            dot.edge(str(node.key), str(node.right.key))
+            self._add_nodes(dot, node.right)
+
+
+
+
+
+
+
+#######termina lo de graphviz
 
 ## MAIN
-def main():
-    avl = AVL()
+## MAIN
+import tkinter as tk
+from PIL import Image, ImageTk
+from tkinter import simpledialog, scrolledtext
+import io
+import contextlib
 
-    while True:
-        print("\n----- MENU -----")
-        print("1.  Insertar curso por ID")
-        print("2.  Eliminar por ID")
-        print("3.  Eliminar por métrica (satisfacción)")
-        print("4.  Buscar por ID")
-        print("5.  Buscar por métrica")
-        print("6.  Buscar: reseñas positivas > negativas + neutras")
-        print("7.  Buscar: fecha de creación posterior a una fecha")
-        print("8.  Buscar: rango de clases")
-        print("9.  Buscar: reseñas > promedio")
-        print("10. Recorrido por niveles")
-        print("11. Salir")
-        option = input("Elige una opción: ").strip()
+def launch_interface(avl, data):
+    dataset = {int(k): {**v, "id": int(k)} for k, v in data.set_index("id").to_dict("index").items()}
 
-        if option == "1":
-            try:
-                course_id = int(input("ID del curso: "))
-                found = False
-                for ind, row in data.iterrows():
-                    if row["id"] == course_id:
-                        avl.root = avl.insert_balance(avl.root, row)
-                        print("Curso insertado correctamente.")
-                        found = True
-                        break
-                if not found:
-                    print("ID no encontrado en el dataset.")
-            except:
-                print("ID inválido.")
+    window = tk.Tk()
+    window.title("lab for the big E")
+    window.configure(bg="#f5f5f5")
+    window.geometry("1200x750")
+    
+    window.resizable(True, True)
 
-        elif option == "2":
-            try:
-                course_id = int(input("ID del curso a eliminar: "))
-                if avl.delete_by_id(course_id):
-                    print("Curso eliminado.")
-                else:
-                    print("ID no encontrado en el árbol.")
-            except:
-                print("ID inválido.")
+    tk.Label(window, text="ARBÓL AVL LABORATORIO 2 - ESTRUCTURA DE DATOS 2", font=("Arial", 16, "bold"), bg="#f5f5f5").pack(pady=10)
 
-        elif option == "3":
-            try:
-                key = round(float(input("Valor de satisfacción: ")), 5)
-                if avl.delete_by_key(key):
-                    print("Nodo eliminado.")
-                else:
-                    print("Valor no encontrado.")
-            except:
-                print("Valor inválido.")
+    msg_var = tk.StringVar()
+    tk.Label(window, textvariable=msg_var, font=("Courier", 10),bg="#f5f5f5", wraplength=1100, justify="left").pack(padx=15, pady=2)
 
-        elif option == "4":
-            try:
-                course_id = int(input("ID del curso: "))
-                node = avl.search_by_id(avl.root, course_id)
-                if node:
-                    print("Curso encontrado:")
-                    avl.get_info(node)
-                    operaciones_nodo(avl, node)
-                else:
-                    print("Curso no encontrado.")
-            except:
-                print("ID inválido.")
+    canvas = tk.Canvas(window, bg="white", relief="groove")
+    canvas.pack(padx=15, pady=5, fill=tk.BOTH, expand=True)
 
-        elif option == "5":
-            metric = input("Métrica (ej: rating, title, num_reviews...): ").strip()
-            value  = input("Valor: ").strip()
-            results = avl.search_by_metric(avl.root, metric, value)
-            if results:
-                _mostrar_resultados(avl, results)
-            else:
-                print("No se encontraron resultados.")
+    tree_img_ref = None
 
-        elif option == "6":
-            results = avl.search_positive_reviews()
-            if results:
-                _mostrar_resultados(avl, results)
-            else:
-                print("No se encontraron resultados.")
+    def show(text):
+        msg_var.set(msg_var.get() + "\n" + text)
 
-        elif option == "7":
-            fecha = input("Fecha (YYYY-MM-DD): ").strip()
-            try:
-                results = avl.search_by_date(fecha)
-                if results:
-                    _mostrar_resultados(avl, results)
-                else:
-                    print("No se encontraron resultados.")
-            except:
-                print("Formato de fecha inválido.")
+    def clear():
+        msg_var.set("")
 
-        elif option == "8":
-            try:
-                min_l = int(input("Mínimo de clases: "))
-                max_l = int(input("Máximo de clases: "))
-                results = avl.search_by_lectures(min_l, max_l)
-                if results:
-                    _mostrar_resultados(avl, results)
-                else:
-                    print("No se encontraron resultados.")
-            except:
-                print("Valores inválidos.")
+    def update_tree_image():
+        nonlocal tree_img_ref
+        try:
+            img = Image.open("avl_tree.png")
+            canvas.update()
+            cw, ch = canvas.winfo_width(), canvas.winfo_height()
+            img.thumbnail((cw, ch), Image.LANCZOS)
+            tree_img_ref = ImageTk.PhotoImage(img)
+            canvas.delete("all")
+            canvas.create_image(cw // 2, ch // 2, anchor="center", image=tree_img_ref)
+        except Exception as e:
+            canvas.delete("all")
+            canvas.create_text(20, 20, anchor="nw",
+                text=f"Tree not available: {e}", fill="gray")
+    import builtins
+    builtins.print = lambda *args, **kwargs: show(" ".join(str(a) for a in args))
+    builtins.input = lambda prompt="": simpledialog.askstring("Input", str(prompt)) or ""
+    def capture(fn):
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            result = fn()
+        show(buf.getvalue())
+        return result
 
-        elif option == "9":
-            promedio = avl.get_average_reviews()
-            print(f"Promedio de reseñas totales: {promedio:.2f}")
-            results = avl.search_by_reviews(promedio)
-            if results:
-                _mostrar_resultados(avl, results)
-            else:
-                print("No se encontraron resultados.")
+    def node_options_window(node):
+        popup = tk.Toplevel(window)
+        popup.title(f"Node — ID {node.data.get('id')}")
+        popup.geometry("260x300")
+        popup.configure(bg="#f5f5f5")
+        popup.resizable(False, False)
 
-        elif option == "10":
-            avl.BFS()
+        tk.Label(popup, text=f"ID: {node.data.get('id')}", font=("Arial", 11, "bold"), bg="#f5f5f5").pack(pady=8)
 
-        elif option == "11":
-            print("¡Hasta luego!")
-            break
+        def btn(text, cmd):
+            tk.Button(popup, text=text, width=30, command=cmd,bg="white", relief="groove",font=("Arial", 10)).pack(pady=2)
 
+        btn("a. Full info",      lambda: [clear(), capture(lambda: avl.get_info(node))])
+        btn("b. Level",          lambda: [clear(), show(f"Level: {avl.get_level(node)}")])
+        btn("c. Balance factor", lambda: [clear(), show(f"Balance factor: {avl.get_balance_node(node)}")])
+        btn("d. Parent",         lambda: [clear(), show(f"Parent: {avl.get_parent(node).data.get('id') if avl.get_parent(node) else 'None'}")])
+        btn("e. Grandparent",    lambda: [clear(), show(f"Grandparent: {avl.get_grandparent(node).data.get('id') if avl.get_grandparent(node) else 'None'}")])
+        btn("f. Uncle",          lambda: [clear(), show(f"Uncle: {avl.get_uncle(node).data.get('id') if avl.get_uncle(node) else 'None'}")])
+        tk.Button(popup, text="Close", width=30, command=popup.destroy,bg="#ffdddd", relief="groove", font=("Arial", 10)).pack(pady=8)
+
+    def select_from_results(results):
+        if not results:
+            show("No results found.")
+            return
+        popup = tk.Toplevel(window)
+        popup.title("Results")
+        popup.geometry("430x300")
+        popup.configure(bg="#f5f5f5")
+
+        tk.Label(popup, text=f"{len(results)} result(s) found:",font=("Arial", 11, "bold"), bg="#f5f5f5").pack(pady=6)
+
+        listbox = tk.Listbox(popup, font=("Courier", 10), width=52, height=12)
+        listbox.pack(padx=10, pady=5, fill=tk.BOTH, expand=True)
+
+        for n in results:
+            listbox.insert(tk.END,f"ID={n.data.get('id')}  |  {str(n.data.get('title',''))[:38]}")
+
+        def on_select():
+            idx = listbox.curselection()
+            if idx:
+                node_options_window(results[idx[0]])
+
+        tk.Button(popup, text="Open node operations", command=on_select,bg="white", relief="groove", font=("Arial", 10)).pack(pady=5)
+
+    def do_insert():
+        clear()
+        course_id = simpledialog.askinteger("Insert", "Enter course ID:")
+        if course_id is None:
+            return
+        if course_id not in dataset:
+            show("ID not found in dataset.")
+            return
+        if avl.search_by_id(avl.root, course_id) is not None:
+            show(f"ID {course_id} is already in the tree.")
+            return
+        avl.root = avl.insert_balance(avl.root, dataset[course_id])
+        avl.visualize()
+        update_tree_image()
+        show(f"Course {course_id} inserted.")
+
+    def do_delete_id():
+        clear()
+        course_id = simpledialog.askinteger("Delete by ID", "Enter course ID:")
+        if course_id is None:
+            return
+        if avl.delete_by_id(course_id):
+            update_tree_image()
+            show(f"Course {course_id} deleted. Tree saved as avl_tree.png")
         else:
-            print("Opción inválida.")
+            show("ID not found in tree.")
 
-
-def _mostrar_resultados(avl, results):
-    print(f"\n{len(results)} resultado(s) encontrado(s):")
-    i = 1
-    for n in results:
-        print(f"  {i}. ID: {n.data['id']} | Sat: {n.key} | {n.data.get('title','')[:50]}")
-        i += 1
-    sel = input("\n¿Operar sobre algún nodo? (número o Enter para saltar): ").strip()
-    if sel.isdigit():
-        idx = int(sel) - 1
-        if 0 <= idx < len(results):
-            operaciones_nodo(avl, results[idx])
-
-
-def operaciones_nodo(avl, node):
-    while True:
-        print("\n-- Operaciones sobre el nodo --")
-        print("a. Info completa")
-        print("b. Nivel")
-        print("c. Factor de balance")
-        print("d. Padre")
-        print("e. Abuelo")
-        print("f. Tío")
-        print("g. Volver")
-        op = input("Elige: ").strip().lower()
-
-        if op == "a":
-            avl.get_info(node)
-
-        elif op == "b":
-            nivel = avl.get_level(node)
-            print(f"Nivel: {nivel}")
-
-        elif op == "c":
-            balance = avl.get_balance(node)
-            print(f"Factor de balance: {balance}")
-
-        elif op == "d":
-            padre = avl.get_parent(node)
-            if padre is None:
-                print("No tiene padre (es la raíz).")
-            else:
-                print(f"Padre: ID {padre.data['id']} | Sat {padre.key}")
-
-        elif op == "e":
-            abuelo = avl.get_grandparent(node)
-            if abuelo is None:
-                print("No tiene abuelo.")
-            else:
-                print(f"Abuelo: ID {abuelo.data['id']} | Sat {abuelo.key}")
-
-        elif op == "f":
-            tio = avl.get_uncle(node)
-            if tio is None:
-                print("No tiene tío.")
-            else:
-                print(f"Tío: ID {tio.data['id']} | Sat {tio.key}")
-
-        elif op == "g":
-            break
-
+    def do_delete_sat():
+        clear()
+        sat = simpledialog.askfloat("Delete by Satisfaction", "Enter satisfaction value:")
+        if sat is None:
+            return
+        if avl.delete_by_key(round(sat, 5)):
+            update_tree_image()
+            show("Node deleted. Tree saved as avl_tree.png")
         else:
-            print("Opción inválida.")
+            show("Satisfaction value not found.")
 
+    def do_search_id():
+        clear()
+        course_id = simpledialog.askinteger("Search by ID", "Enter course ID:")
+        if course_id is None:
+            return
+        result = avl.search_by_id(avl.root, course_id)
+        if result:
+            show(f"Found: {result.data.get('title','')}")
+            node_options_window(result)
+        else:
+            show("ID not found.")
 
-main()
+    def do_search_metric():
+        clear()
+        metric = simpledialog.askstring("Search by Metric","Enter metric name (e.g. title, rating, num_reviews):")
+        if not metric:
+            return
+        value = simpledialog.askstring("Search by Metric", f"Enter value for '{metric}':")
+        if value is None:
+            return
+        results = avl.search_by_metric(avl.root, metric, value)
+        show(f"{len(results)} result(s) found.")
+        select_from_results(results)
+
+    def do_delete_metric():
+        clear()
+        metric = simpledialog.askstring("Delete by Metric", "Enter metric name (e.g. title, rating, num_reviews):")
+        if not metric or metric.strip() == "":
+            show("No metric entered.")
+            return
+        if metric not in avl.row_metric_list:
+            show(f"Metric '{metric}' does not exist. Valid metrics are:\n{', '.join(avl.row_metric_list)}")
+            return
+        value = simpledialog.askstring("Delete by Metric", f"Enter value for '{metric}':")
+        if not value or value.strip() == "":
+            show("No value entered.")
+            return
+        if avl.delete_by_metric(metric, value):
+            update_tree_image()
+
+    def do_positive_reviews():
+        clear()
+        results = avl.search_positive_reviews()
+        show(f"{len(results)} course(s) found.")
+        select_from_results(results)
+
+    def do_by_date():
+        clear()
+        fecha = simpledialog.askstring("Search by Date", "Enter date (YYYY-MM-DD):")
+        if not fecha:
+            return
+        try:
+            results = avl.search_by_date(fecha)
+            show(f"{len(results)} course(s) created after {fecha}.")
+            select_from_results(results)
+        except:
+            show("Invalid date format.")
+
+    def do_by_lectures():
+        clear()
+        min_l = simpledialog.askinteger("Lectures Range", "Minimum lectures:")
+        if min_l is None:
+            return
+        max_l = simpledialog.askinteger("Lectures Range", "Maximum lectures:")
+        if max_l is None:
+            return
+        results = avl.search_by_lectures(min_l, max_l)
+        show(f"{len(results)} course(s) found.")
+        select_from_results(results)
+
+    def do_above_average():
+        clear()
+        promedio = avl.get_average_reviews()
+        show(f"Average reviews: {promedio:.2f}")
+        results = avl.search_by_reviews(promedio)
+        show(f"{len(results)} course(s) above average.")
+        select_from_results(results)
+
+    def do_bfs():
+        clear()
+        capture(lambda: avl.BFS())
+
+    btn_frame = tk.Frame(window, bg="#f5f5f5")
+    btn_frame.pack(pady=8)
+
+    buttons = [
+        ("Insert by ID",           do_insert),
+        ("Delete by ID",           do_delete_id),
+        ("Delete by Satisfaction", do_delete_sat),
+        ("Delete by Metric",       do_delete_metric),
+        ("Search by ID",           do_search_id),
+        ("Search by Metric",       do_search_metric),
+        ("Positive Reviews",       do_positive_reviews),
+        ("Created After Date",     do_by_date),
+        ("Lectures in Range",      do_by_lectures),
+        ("Above Avg Reviews",      do_above_average),
+        ("BFS",          do_bfs),
+    ]
+
+    for i, (text, cmd) in enumerate(buttons):
+        tk.Button(btn_frame, text=text, width=22, height=2, command=cmd,bg="white", relief="groove", font=("Arial", 10)).grid(row=i//5, column=i%5, padx=4, pady=4)
+
+    window.mainloop()
+
+avl = AVL()
+launch_interface(avl, data)
