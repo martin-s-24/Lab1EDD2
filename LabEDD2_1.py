@@ -1,6 +1,4 @@
-from datetime import  datetime
-from platform import node 
-from numpy._core.umath import rint
+from datetime import  datetime # Para manejar fechas
 import pandas as pd
 from graphviz import Digraph, dot
 import os
@@ -8,14 +6,14 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 data = pd.read_csv(os.path.join(BASE_DIR, "dataset_courses_with_reviews.csv"))                   
 class nodo:
     def __init__(self, data):
-        self.data = data
-        self.key = nodo.satisfaction(data)
-        self.left = None
-        self.right = None
-        self.height = 1
+        self.data = data # Información del curso (fila del dataset)
+        self.key = nodo.satisfaction(data) # Nivel de satisfacción
+        self.left = None # hijo izq
+        self.right = None # hijo der
+        self.height = 1 # Altura del nodo (usada para el balanceo AVL)
 
     @staticmethod
-    def satisfaction(row):
+    def satisfaction(row):  # Calcula el nivel de satisfacción del curso con la fórmula del laboratorio
         rating = row["rating"]
         pos = row["positive_reviews"]
         neg = row["negative_reviews"]
@@ -30,23 +28,25 @@ class nodo:
 class AVL:
     def __init__(self):
         self.root = None
-        self.row_metric_list = data.columns.tolist()
+        self.row_metric_list = data.columns.tolist() # Lista de columnas del dataset
 
-    def get_height(self, nodo):
+    def get_height(self, nodo): # Retorna la altura de un nodo
         if nodo: 
             return nodo.height
         else: 
             return 0
 
     def get_balance(self, nodo):
+        # Calcula el factor de balance: altura izquierda - altura derecha
+        # Si es > 1 o < -1, el árbol está desbalanceado
         if nodo is None:
             return 0
         return self.get_height(nodo.left) - self.get_height(nodo.right)
 
-    def update_height(self, nodo):
+    def update_height(self, nodo): # Actualiza la altura de un nodo basándose en sus hijos
         nodo.height = 1 + max(self.get_height(nodo.left), self.get_height(nodo.right))
 
-    def left_rotation(self, p):
+    def left_rotation(self, p): # Rotación simple izquierda — caso derecha-derecha
         q = p.right  
         temp = q.left
         q.left = p  
@@ -64,15 +64,15 @@ class AVL:
         self.update_height(q)
         return q  
     
-    def left_right_rotation(self, p):
+    def left_right_rotation(self, p): # Rotación doble izquierda-derecha — caso izquierda-derecha
         p.left = self.left_rotation(p.left)
         return self.right_rotation(p)
     
-    def right_left_rotation(self, p):
+    def right_left_rotation(self, p): # Rotación doble derecha-izquierda — caso derecha-izquierda
         p.right = self.right_rotation(p.right)
         return self.left_rotation(p)
 
-    def search_generic(self, key):
+    def search_generic(self, key): # Busca un nodo por su key (satisfacción)
         p = self.root
         pad = None
         while p is not None:
@@ -85,19 +85,21 @@ class AVL:
                 p = p.right
         return p, pad
 
-    def max_der(self, nodo):
+    def max_der(self, nodo): # Encuentra el nodo con el mayor key en un subárbol
         if nodo is None:
             return None
         if nodo.right is None:
             return nodo
         return self.max_der(nodo.right)
 
-    def predecesor(self, nodo):
+    def predecesor(self, nodo): # Encuentra el predecesor de un nodo — el mayor del subárbol izquierdo
         if nodo is None:
             return None
         return self.max_der(nodo.left)
 
     def search_by_id(self, nodo, id):
+        # Busca un nodo por ID de forma recursiva
+        # Como el árbol está ordenado por satisfacción y no por ID, toca buscar en ambos lados
         if nodo is None:
             return None
         if nodo.data["id"] == id:
@@ -108,7 +110,7 @@ class AVL:
             return resultado
         return self.search_by_id(nodo.right, id)
 
-    def delete_by_id(self, id):
+    def delete_by_id(self, id): # Elimina un nodo del árbol dado su ID
         nodo = self.search_by_id(self.root, id)
         if nodo is None:
             return False  # no existe
@@ -116,7 +118,7 @@ class AVL:
         self.visualize()
         return True
 
-    def delete_by_key(self, key):
+    def delete_by_key(self, key): # Elimina un nodo del árbol dado su key
         p, padre = self.search_generic(key)
         if p is None:
             return False  # no existe
@@ -124,7 +126,7 @@ class AVL:
         self.visualize()
         return True
 
-    def delete(self, nodo, key):
+    def delete(self, nodo, key): # Eliminación recursiva con balanceo AVL
         if nodo is None:
             return None
         if key < nodo.key:
@@ -165,7 +167,7 @@ class AVL:
 
         return nodo
 
-    def search_positive_reviews(self, nodo=None, result=None, yacomenzo=False):
+    def search_positive_reviews(self, nodo=None, result=None, yacomenzo=False):  # Busca nodos donde las reseñas positivas superen la suma de negativas y neutras
         if result is None:
             result = []
         if not yacomenzo:
@@ -178,7 +180,7 @@ class AVL:
             self.search_positive_reviews(nodo.right, result, yacomenzo)
         return result
     
-    def search_by_date(self, fecha, node=None, result=None, yacomenzo=False):
+    def search_by_date(self, fecha, node=None, result=None, yacomenzo=False): # Busca nodos cuya fecha de creación sea posterior a la fecha dada
         if result is None:
             result = []
         if not yacomenzo:
@@ -193,7 +195,7 @@ class AVL:
             self.search_by_date(fecha, node.right, result, yacomenzo)
         return result
     
-    def search_by_lectures(self, min_lectures, max_lectures, node=None, result=None, yacomenzo=False):
+    def search_by_lectures(self, min_lectures, max_lectures, node=None, result=None, yacomenzo=False): # Busca nodos cuya cantidad de clases esté dentro del rango dado
         if result is None:
             result = []
         if not yacomenzo:
@@ -206,7 +208,7 @@ class AVL:
             self.search_by_lectures(min_lectures, max_lectures, node.right, result, yacomenzo)
         return result
     
-    def search_by_reviews(self, promedio, node=None, result=None, yacomenzo=False):
+    def search_by_reviews(self, promedio, node=None, result=None, yacomenzo=False): # Busca nodos cuyas reseñas positivas, negativas o neutras superen el promedio
         if result is None:
             result = []
         if not yacomenzo:
@@ -218,14 +220,14 @@ class AVL:
             self.search_by_reviews(promedio, node.left, result, yacomenzo)
             self.search_by_reviews(promedio, node.right, result, yacomenzo)
         return result
-    
-    def get_average_reviews(self):
+     
+    def get_average_reviews(self): # Calcula el promedio de reseñas totales de todos los nodos del árbol
         total, count = self.get_average(self.root, 0, 0)
         if count == 0:
             return 0
         return total / count
 
-    def get_average(self, node, total, count):
+    def get_average(self, node, total, count): # Método auxiliar recursivo que acumula total de reseñas y cantidad de nodos
         if node is None:
             return total, count
         total += node.data["num_reviews"]
@@ -238,7 +240,7 @@ class AVL:
         ##################################################################
         ##lo mio de insertar por id y que se balancee automaticamente#####
         ##################################################################
-    def insert_balance(self, node, data):
+    def insert_balance(self, node, data): # Inserta un nodo de forma recursiva y balancea el árbol automáticamente
         key = nodo.satisfaction(data)
         if node is None:
             return nodo(data)
@@ -260,7 +262,7 @@ class AVL:
             return self.right_left_rotation(node)
         return node
 
-    def insert_by_ID_user(self, dataset):
+    def insert_by_ID_user(self, dataset): # Solicita un ID al usuario e inserta el curso correspondiente en el árbol
         try:
             course_id = int(input("Insert course ID: "))
         except ValueError:
@@ -274,7 +276,7 @@ class AVL:
         self.visualize()
         return True
     
-    def delete_by_metric(self, metric, value):
+    def delete_by_metric(self, metric, value): # Elimina todos los nodos que coincidan con el valor de la métrica dada
         results = self.search_by_metric(self.root, metric, value)
         if not results:
             print(f"No nodes found with {metric}={value}")
@@ -286,7 +288,7 @@ class AVL:
         return True
 
 
-    def BFS(self):
+    def BFS(self): # Recorrido por niveles del árbol — llama Layer_Traversal para cada nivel
         height = self.get_height(self.root)
         for level in range(0, height):
             print(f"Level {level}:")
@@ -294,7 +296,7 @@ class AVL:
 
 
 
-    def Layer_Traversal(self, node, level, i=0):
+    def Layer_Traversal(self, node, level, i=0): # Recorre recursivamente el árbol e imprime los IDs del nivel indicado
         if node is None:
             return
         if i == level:
@@ -304,7 +306,7 @@ class AVL:
         self.Layer_Traversal(node.right, level, i + 1)
 
 
-    def search_by_metric(self, node, metric, value, results=None):
+    def search_by_metric(self, node, metric, value, results=None): # Busca nodos por cualquier columna del dataset (métrica)
         if results is None:
             results = []
         if node is None:
