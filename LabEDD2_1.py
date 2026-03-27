@@ -335,14 +335,18 @@ class AVL:
         else:
             print("No results found.")
         return results
-   
+   #
+    # Imprime toda la información del curso almacenada en el nodo
     def get_info(self, node):
         for key, value in node.data.items():
             print(f"{key}: {value}")
 
+    # Retorna el factor de balanceo del nodo (altura izquierda - altura derecha)
     def get_balance_node(self, node):
         return self.get_balance(node)
 
+    # Retorna el nivel del nodo en el árbol de forma recursiva
+    # El nivel de la raíz es 0, sus hijos 1, y así sucesivamente
     def get_level(self, node, current=None, level=0):
         if current is None:
             current = self.root
@@ -354,6 +358,8 @@ class AVL:
             return self.get_level(node, current.left, level + 1)
         return self.get_level(node, current.right, level + 1)
 
+    # Encuentra el padre del nodo de forma recursiva
+    # Desciende por el árbol rastreando quién llamó a quién
     def get_parent(self, node, current=None, parent=None):
         if current is None:
             current = self.root
@@ -365,12 +371,16 @@ class AVL:
             return self.get_parent(node, current.left, current)
         return self.get_parent(node, current.right, current)
 
+    # Encuentra el abuelo del nodo de forma recursiva
+    # El abuelo es el padre del padre
     def get_grandparent(self, node):
         parent = self.get_parent(node)
         if parent is None:
             return None
         return self.get_parent(parent)
 
+    # Encuentra el tío del nodo de forma recursiva
+    # El tío es el otro hijo del abuelo (el hermano del padre)
     def get_uncle(self, node):
         parent = self.get_parent(node)
         if parent is None:
@@ -378,33 +388,40 @@ class AVL:
         grandparent = self.get_grandparent(node)
         if grandparent is None:
             return None
+        # Si el padre es el hijo izquierdo, el tío es el hijo derecho y viceversa
         if grandparent.left and grandparent.left.key == parent.key:
             return grandparent.right
         return grandparent.left
 
     ####################################################################
     ##aqui termina lo mio##
-###### aqui empieza lo de graphviz 
+###### aqui empieza lo de graphviz
+
+    # Genera la imagen del árbol usando graphviz y la guarda como PNG
     def visualize(self, filename="avl_tree"):
         dot = Digraph()
+        # Configura la fuente para soportar caracteres no ASCII
         dot.attr(fontname="Arial Unicode MS")
         dot.node_attr.update(fontname="Arial Unicode MS")
         self._add_nodes(dot, self.root)
         dot.render(filename, format="png", cleanup=True)
         print(f"Tree saved as {filename}.png")
 
-    def _add_nodes(self, dot, node):
+    # Recorre el árbol recursivamente y agrega cada nodo y sus aristas al grafo
+    def add_nodes(self, dot, node):
         if node is None:
             return
         course_id = node.data.get("id", "")
+        # Trunca el título a 20 caracteres para que el nodo no sea demasiado grande
         title = str(node.data.get("title", ""))[:20]
-        # replace non-ascii characters so graphviz can render them
-        ##title = title.encode("ascii", "replace").decode("ascii")
+        # Etiqueta del nodo con id, título y satisfacción
         label = f"ID: {course_id}\nTitle: {title}\nSat: {node.key}"
         dot.node(str(node.key), label=label)
+        # Arista hacia el hijo izquierdo
         if node.left:
             dot.edge(str(node.key), str(node.left.key))
             self._add_nodes(dot, node.left)
+        # Arista hacia el hijo derecho
         if node.right:
             dot.edge(str(node.key), str(node.right.key))
             self._add_nodes(dot, node.right)
@@ -426,31 +443,39 @@ import io
 import contextlib
 
 def launch_interface(avl, data):
+    # Convierte el dataset a un diccionario indexado por id para búsquedas rápidas
     dataset = {int(k): {**v, "id": int(k)} for k, v in data.set_index("id").to_dict("index").items()}
 
+    # Configuración de la ventana principal
     window = tk.Tk()
     window.title("lab for the big E")
     window.configure(bg="#f5f5f5")
     window.geometry("1200x750")
-    
     window.resizable(True, True)
 
+    # Título de la interfaz
     tk.Label(window, text="ARBÓL AVL LABORATORIO 2 - ESTRUCTURA DE DATOS 2", font=("Arial", 16, "bold"), bg="#f5f5f5").pack(pady=10)
 
+    # Variable de texto para mostrar mensajes al usuario
     msg_var = tk.StringVar()
-    tk.Label(window, textvariable=msg_var, font=("Courier", 10),bg="#f5f5f5", wraplength=1100, justify="left").pack(padx=15, pady=2)
+    tk.Label(window, textvariable=msg_var, font=("Courier", 10), bg="#f5f5f5", wraplength=1100, justify="left").pack(padx=15, pady=2)
 
+    # Canvas donde se muestra la imagen del árbol
     canvas = tk.Canvas(window, bg="white", relief="groove")
     canvas.pack(padx=15, pady=5, fill=tk.BOTH, expand=True)
 
+    # Referencia a la imagen del árbol para evitar que el recolector de basura la elimine
     tree_img_ref = None
 
+    # Función para agregar texto al área de mensajes
     def show(text):
         msg_var.set(msg_var.get() + "\n" + text)
 
+    # Función para limpiar el área de mensajes
     def clear():
         msg_var.set("")
 
+    # Función para actualizar la imagen del árbol en el canvas
     def update_tree_image():
         nonlocal tree_img_ref
         try:
@@ -465,9 +490,13 @@ def launch_interface(avl, data):
             canvas.delete("all")
             canvas.create_text(20, 20, anchor="nw",
                 text=f"Tree not available: {e}", fill="gray")
+
+    # Redirige print() al área de mensajes y input() a ventanas de diálogo
     import builtins
     builtins.print = lambda *args, **kwargs: show(" ".join(str(a) for a in args))
     builtins.input = lambda prompt="": simpledialog.askstring("Input", str(prompt)) or ""
+
+    # Captura la salida de funciones que usan print() y la muestra en el área de mensajes
     def capture(fn):
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
@@ -475,6 +504,7 @@ def launch_interface(avl, data):
         show(buf.getvalue())
         return result
 
+    # Ventana emergente con las operaciones disponibles sobre un nodo seleccionado
     def node_options_window(node):
         popup = tk.Toplevel(window)
         popup.title(f"Node — ID {node.data.get('id')}")
@@ -484,17 +514,20 @@ def launch_interface(avl, data):
 
         tk.Label(popup, text=f"ID: {node.data.get('id')}", font=("Arial", 11, "bold"), bg="#f5f5f5").pack(pady=8)
 
+        # Función auxiliar para crear botones uniformes en el popup
         def btn(text, cmd):
-            tk.Button(popup, text=text, width=30, command=cmd,bg="white", relief="groove",font=("Arial", 10)).pack(pady=2)
+            tk.Button(popup, text=text, width=30, command=cmd, bg="white", relief="groove", font=("Arial", 10)).pack(pady=2)
 
+        # Botones para cada operación sobre el nodo (a-f del laboratorio)
         btn("a. Full info",      lambda: [clear(), capture(lambda: avl.get_info(node))])
         btn("b. Level",          lambda: [clear(), show(f"Level: {avl.get_level(node)}")])
         btn("c. Balance factor", lambda: [clear(), show(f"Balance factor: {avl.get_balance_node(node)}")])
         btn("d. Parent",         lambda: [clear(), show(f"Parent: {avl.get_parent(node).data.get('id') if avl.get_parent(node) else 'None'}")])
         btn("e. Grandparent",    lambda: [clear(), show(f"Grandparent: {avl.get_grandparent(node).data.get('id') if avl.get_grandparent(node) else 'None'}")])
         btn("f. Uncle",          lambda: [clear(), show(f"Uncle: {avl.get_uncle(node).data.get('id') if avl.get_uncle(node) else 'None'}")])
-        tk.Button(popup, text="Close", width=30, command=popup.destroy,bg="#ffdddd", relief="groove", font=("Arial", 10)).pack(pady=8)
+        tk.Button(popup, text="Close", width=30, command=popup.destroy, bg="#ffdddd", relief="groove", font=("Arial", 10)).pack(pady=8)
 
+    # Ventana emergente que muestra los resultados de una búsqueda y permite seleccionar un nodo
     def select_from_results(results):
         if not results:
             show("No results found.")
@@ -504,29 +537,34 @@ def launch_interface(avl, data):
         popup.geometry("430x300")
         popup.configure(bg="#f5f5f5")
 
-        tk.Label(popup, text=f"{len(results)} result(s) found:",font=("Arial", 11, "bold"), bg="#f5f5f5").pack(pady=6)
+        tk.Label(popup, text=f"{len(results)} result(s) found:", font=("Arial", 11, "bold"), bg="#f5f5f5").pack(pady=6)
 
+        # Lista con los resultados encontrados
         listbox = tk.Listbox(popup, font=("Courier", 10), width=52, height=12)
         listbox.pack(padx=10, pady=5, fill=tk.BOTH, expand=True)
 
         for n in results:
-            listbox.insert(tk.END,f"ID={n.data.get('id')}  |  {str(n.data.get('title',''))[:38]}")
+            listbox.insert(tk.END, f"ID={n.data.get('id')}  |  {str(n.data.get('title',''))[:38]}")
 
+        # Al seleccionar un nodo de la lista, abre el popup de operaciones
         def on_select():
             idx = listbox.curselection()
             if idx:
                 node_options_window(results[idx[0]])
 
-        tk.Button(popup, text="Open node operations", command=on_select,bg="white", relief="groove", font=("Arial", 10)).pack(pady=5)
+        tk.Button(popup, text="Open node operations", command=on_select, bg="white", relief="groove", font=("Arial", 10)).pack(pady=5)
 
+    # Inserta un curso en el árbol dado su ID
     def do_insert():
         clear()
         course_id = simpledialog.askinteger("Insert", "Enter course ID:")
         if course_id is None:
             return
+        # Verifica que el ID exista en el dataset
         if course_id not in dataset:
             show("ID not found in dataset.")
             return
+        # Verifica que el ID no esté ya en el árbol
         if avl.search_by_id(avl.root, course_id) is not None:
             show(f"ID {course_id} is already in the tree.")
             return
@@ -535,6 +573,7 @@ def launch_interface(avl, data):
         update_tree_image()
         show(f"Course {course_id} inserted.")
 
+    # Elimina un nodo del árbol dado su ID
     def do_delete_id():
         clear()
         course_id = simpledialog.askinteger("Delete by ID", "Enter course ID:")
@@ -546,6 +585,7 @@ def launch_interface(avl, data):
         else:
             show("ID not found in tree.")
 
+    # Elimina un nodo del árbol dado su valor de satisfacción
     def do_delete_sat():
         clear()
         sat = simpledialog.askfloat("Delete by Satisfaction", "Enter satisfaction value:")
@@ -557,6 +597,7 @@ def launch_interface(avl, data):
         else:
             show("Satisfaction value not found.")
 
+    # Busca un nodo en el árbol dado su ID
     def do_search_id():
         clear()
         course_id = simpledialog.askinteger("Search by ID", "Enter course ID:")
@@ -569,9 +610,10 @@ def launch_interface(avl, data):
         else:
             show("ID not found.")
 
+    # Busca nodos en el árbol dado una métrica y su valor
     def do_search_metric():
         clear()
-        metric = simpledialog.askstring("Search by Metric","Enter metric name (e.g. title, rating, num_reviews):")
+        metric = simpledialog.askstring("Search by Metric", "Enter metric name (e.g. title, rating, num_reviews):")
         if not metric:
             return
         value = simpledialog.askstring("Search by Metric", f"Enter value for '{metric}':")
@@ -581,12 +623,14 @@ def launch_interface(avl, data):
         show(f"{len(results)} result(s) found.")
         select_from_results(results)
 
+    # Elimina nodos del árbol dado una métrica y su valor
     def do_delete_metric():
         clear()
         metric = simpledialog.askstring("Delete by Metric", "Enter metric name (e.g. title, rating, num_reviews):")
         if not metric or metric.strip() == "":
             show("No metric entered.")
             return
+        # Valida que la métrica exista en el dataset
         if metric not in avl.row_metric_list:
             show(f"Metric '{metric}' does not exist. Valid metrics are:\n{', '.join(avl.row_metric_list)}")
             return
@@ -597,12 +641,14 @@ def launch_interface(avl, data):
         if avl.delete_by_metric(metric, value):
             update_tree_image()
 
+    # Busca cursos cuyas reseñas positivas superen la suma de negativas y neutras
     def do_positive_reviews():
         clear()
         results = avl.search_positive_reviews()
         show(f"{len(results)} course(s) found.")
         select_from_results(results)
 
+    # Busca cursos creados después de una fecha dada
     def do_by_date():
         clear()
         fecha = simpledialog.askstring("Search by Date", "Enter date (YYYY-MM-DD):")
@@ -615,6 +661,7 @@ def launch_interface(avl, data):
         except:
             show("Invalid date format.")
 
+    # Busca cursos cuyo número de clases esté dentro de un rango dado
     def do_by_lectures():
         clear()
         min_l = simpledialog.askinteger("Lectures Range", "Minimum lectures:")
@@ -627,6 +674,7 @@ def launch_interface(avl, data):
         show(f"{len(results)} course(s) found.")
         select_from_results(results)
 
+    # Busca cursos cuyas reseñas superen el promedio total de reseñas del árbol
     def do_above_average():
         clear()
         promedio = avl.get_average_reviews()
@@ -635,13 +683,16 @@ def launch_interface(avl, data):
         show(f"{len(results)} course(s) above average.")
         select_from_results(results)
 
+    # Muestra el recorrido por niveles del árbol
     def do_bfs():
         clear()
         capture(lambda: avl.BFS())
 
+    # Marco que contiene todos los botones de la interfaz
     btn_frame = tk.Frame(window, bg="#f5f5f5")
     btn_frame.pack(pady=8)
 
+    # Lista de botones con su texto y función asociada
     buttons = [
         ("Insert by ID",           do_insert),
         ("Delete by ID",           do_delete_id),
@@ -653,12 +704,14 @@ def launch_interface(avl, data):
         ("Created After Date",     do_by_date),
         ("Lectures in Range",      do_by_lectures),
         ("Above Avg Reviews",      do_above_average),
-        ("BFS",          do_bfs),
+        ("BFS",                    do_bfs),
     ]
 
+    # Crea y posiciona cada botón en una cuadrícula de 5 columnas
     for i, (text, cmd) in enumerate(buttons):
-        tk.Button(btn_frame, text=text, width=22, height=2, command=cmd,bg="white", relief="groove", font=("Arial", 10)).grid(row=i//5, column=i%5, padx=4, pady=4)
+        tk.Button(btn_frame, text=text, width=22, height=2, command=cmd, bg="white", relief="groove", font=("Arial", 10)).grid(row=i//5, column=i%5, padx=4, pady=4)
 
+    # Inicia el bucle principal de la interfaz
     window.mainloop()
 
 avl = AVL()
