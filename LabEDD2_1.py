@@ -318,7 +318,7 @@ class AVL:
         self.search_by_metric(node.left, metric, value, results)
         self.search_by_metric(node.right, metric, value, results)
         return results
-######esta vaina no se usa
+
     def search_specific(self):
         for i in range(len(self.row_metric_list)):
             print(f"{i+1}. {self.row_metric_list[i]}")
@@ -335,7 +335,7 @@ class AVL:
         else:
             print("No results found.")
         return results
-    #####esta vain no se usa
+   
     def get_info(self, node):
         for key, value in node.data.items():
             print(f"{key}: {value}")
@@ -421,7 +421,7 @@ class AVL:
 ## MAIN
 import tkinter as tk
 from PIL import Image, ImageTk
-from tkinter import simpledialog, scrolledtext
+from tkinter import simpledialog
 import io
 import contextlib
 
