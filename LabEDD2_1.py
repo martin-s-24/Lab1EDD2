@@ -409,7 +409,7 @@ class AVL:
         print(f"Tree saved as {filename}.png")
 
     # Recorre el árbol recursivamente y agrega cada nodo y sus aristas al grafo
-    def add_nodes(self, dot, node):
+    def _add_nodes(self, dot, node):
         if node is None:
             return
         course_id = node.data.get("id", "")
