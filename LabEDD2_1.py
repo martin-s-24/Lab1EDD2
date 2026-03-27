@@ -3,8 +3,9 @@ from platform import node
 from numpy._core.umath import rint
 import pandas as pd
 from graphviz import Digraph, dot
-data = pd.read_csv(r"C:\Users\mayma\Downloads\dataset_courses_with_reviews.csv")
-                   
+import os
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+data = pd.read_csv(os.path.join(BASE_DIR, "dataset_courses_with_reviews.csv"))                   
 class nodo:
     def __init__(self, data):
         self.data = data
